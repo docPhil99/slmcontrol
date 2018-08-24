@@ -14,7 +14,7 @@ from PyQt4 import QtCore, QtGui
 from io import BytesIO
 import json
 from PyQt4 import QtCore as qtcore
-HOST, PORT = '127.0.0.1', 12345
+HOST, PORT = '', 12345
 
 class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
 
@@ -77,8 +77,11 @@ class HttpDaemon(QtCore.QThread):
 class Window(QtGui.QWidget):
     def __init__(self):
         super(Window, self).__init__()
-
+        self.setWindowFlags(QtCore.Qt.FramelessWindowHint)
+        styleSheetCss="QWigget {border-width: 0px;}"
+        self.setStyleSheet(styleSheetCss)
         self.showFullScreen()
+        self.resize(800,480)
         self.image_label=QtGui.QLabel("image")
         layout = QtGui.QVBoxLayout(self)
        
