@@ -56,13 +56,13 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         self.send_response(200)
         
         self.end_headers()
-        
+        #print(body)
         data=json.loads(body.decode('utf-8'))
-        #print(data)
+ #       print(data)
         #self.emit(qtcore.SIGNAL("signal"),json)
         r=self.server._got_data(data)
         response = BytesIO()
-        response.write(b'from slmcontrol server: ')
+        #response.write(b'from slmcontrol server: ')
         response.write(str.encode(r))
         self.wfile.write(response.getvalue())
 class myServer(HTTPServer):
