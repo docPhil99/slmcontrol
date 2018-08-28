@@ -11,10 +11,37 @@ import base64
 
 from http.server import HTTPServer, BaseHTTPRequestHandler#, SimpleHTTPRequestHandler
 from PyQt4 import QtCore, QtGui
+from PyQt4 import Qt
 from io import BytesIO
+import inspect
 import json
 from PyQt4 import QtCore as qtcore
-HOST, PORT = '127.0.0.1', 12345
+HOST, PORT = '', 12345
+
+
+class Settings:
+    width=1
+    height=1
+    @classmethod
+    def to_json(cls):
+
+        w={key:value for key, value in cls.__dict__.items() if not
+                key.startswith('__') and not callable(value) and not
+                key=="update" and not key=="to_json"}
+        r=json.dumps(w)
+        return r
+    @classmethod
+    def update(cls):
+
+        rect=QtGui.QApplication.desktop().screenGeometry()
+        cls.width=rect.width()
+        cls.height=rect.height()
+        w={key:value for key, value in cls.__dict__.items() if not
+                key.startswith('__') and not callable(value) and not
+                key=="update" and not key=="to_json"}
+        print(w)
+#        print(json.dumps(w))
+
 
 class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
 
@@ -29,25 +56,28 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         self.send_response(200)
         
         self.end_headers()
-        
+        #print(body)
         data=json.loads(body.decode('utf-8'))
-        #print(data)
+ #       print(data)
         #self.emit(qtcore.SIGNAL("signal"),json)
-        self.server._got_data(data)
+        r=self.server._got_data(data)
         response = BytesIO()
-        response.write(b'This is POST request. ')
-        response.write(b'Received: ')
-        response.write(body)
+        #response.write(b'from slmcontrol server: ')
+        response.write(str.encode(r))
         self.wfile.write(response.getvalue())
 class myServer(HTTPServer):
     def __init__(self,parent,*args,**kwargs):
         self.parent=parent
         super().__init__(*args,**kwargs)
-        
+
     def _got_data(self,data):
-        
         print('got data')
-        self.parent.got_data(data)
+        if data['command']=='info':
+            r=Settings.to_json()
+        else:
+            r=data['command']
+            self.parent.got_data(data)
+        return r
         
     
 class HttpDaemon(QtCore.QThread):
@@ -77,16 +107,20 @@ class HttpDaemon(QtCore.QThread):
 class Window(QtGui.QWidget):
     def __init__(self):
         super(Window, self).__init__()
-
+        Settings.update()
+        self.setWindowFlags(QtCore.Qt.FramelessWindowHint)
+        styleSheetCss="QWigget {border-width: 0px;}"
+        self.setStyleSheet(styleSheetCss)
         self.showFullScreen()
+        self.resize(800,480)
         self.image_label=QtGui.QLabel("image")
         layout = QtGui.QVBoxLayout(self)
-       
         layout.addWidget(self.image_label)
+        layout.setContentsMargins(0,0,0,0)
         self.httpd = HttpDaemon(self)
         self.httpd.start()
         self.httpd.data_signal.connect(self.handleJSON)
-       
+        self.setCursor(qtcore.Qt.BlankCursor) 
         
     @qtcore.pyqtSlot(str)
     def handleJSON(self,data):
@@ -101,11 +135,7 @@ class Window(QtGui.QWidget):
             pix=QtGui.QPixmap()
             pix.loadFromData(image_file_data)
             self.image_label.setPixmap(pix)
-        
-        #self.button.setText(data)
-        
 
-    
     def closeEvent(self, event):
         self.httpd.stop()
 
